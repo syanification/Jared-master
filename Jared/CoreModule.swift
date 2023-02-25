@@ -54,7 +54,9 @@ class CoreModule: RoutingModule {
         
         let ping = Route(name:"/ping", comparisons: [.startsWith: ["/ping"]], call: {[weak self] in self?.pingCall($0)}, description: NSLocalizedString("pingDescription"))
         
-        let thankYou = Route(name:"Thank You", comparisons: [.startsWith: [NSLocalizedString("ThanksJaredCommand")]], call: {[weak self] in self?.thanksJared($0)}, description: NSLocalizedString("ThanksJaredResponse"))
+        let thankYou = Route(name:"Thank You", comparisons: [.startsWith: ["Thank You"]], call: {[weak self] in self?.thanksJared($0)}, description: NSLocalizedString("ThanksJaredResponse"))
+        
+        let wordleScore = Route(name:"Wordle Score", comparisons: [.startsWith: ["Wordle"]], call: {[weak self] in self?.wordleScore($0)}, description: "Gets Wordle Score From Copy/Paste")
         
         let version = Route(name: "/version", comparisons: [.startsWith: ["/version"]], call: {[weak self] in self?.getVersion($0)}, description: "Get the version of Jared running")
         
@@ -68,7 +70,9 @@ class CoreModule: RoutingModule {
         
         let barf = Route(name: "/barf", comparisons: [.startsWith: ["/barf"]], call: {[weak self] in self?.barf($0)}, description: NSLocalizedString("barfDescription"))
         
-        routes = [ping, thankYou, version, send, whoami, name, schedule, barf]
+        
+        
+        routes = [ping, thankYou, version, send, whoami, name, schedule, barf, wordleScore]
         
         //Launch background thread that will check for scheduled messages to send
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true, block: {[weak self] (theTimer) in
@@ -79,7 +83,6 @@ class CoreModule: RoutingModule {
     deinit {
         timer.invalidate()
     }
-    
     
     func pingCall(_ incoming: Message) -> Void {
         sender.send(NSLocalizedString("PongResponse"), to: incoming.RespondTo())
@@ -100,6 +103,19 @@ class CoreModule: RoutingModule {
     
     func thanksJared(_ message: Message) -> Void {
         sender.send(NSLocalizedString("WelcomeResponse"), to: message.RespondTo())
+    }
+    
+    func wordleScore(_ message: Message) -> Void {
+        let _ = print(message.getTextBody() ?? "N/A")
+        
+        let mArray = String(message.getTextBody() ?? "N/A").split(separator: " ")
+        let day = Int(mArray[1]) ?? -1
+        
+        let sArray = mArray[2].split(separator: "/")
+        let score = Int(sArray[0]) ?? 0
+        
+        sender.send("Score Received | day: "+String(day)+" score: "+String(score), to: message.RespondTo())
+        
     }
     
     func getVersion(_ message: Message) -> Void {
