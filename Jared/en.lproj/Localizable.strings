@@ -1,0 +1,58 @@
+/* 
+  CoreStrings.strings
+  Jared
+
+  Created by Zeke Snider on 4/5/16.
+  Copyright © 2016 Zeke Snider. All rights reserved.
+*/
+
+"InternalModule" = "Internal functionality to message routing";
+"CoreDescription" = "Core functionality for Jared with universal uses";
+
+/* Response for /ping command */
+"hello" = "bonjour";
+
+/* You're welcome string */
+"WelcomeResponse" = "You're welcome.";
+
+/* Thank you command */
+"ThanksJaredCommand" = "Thank you Jared";
+"ThanksJaredResponse" = "Thank Jared";
+
+/* Ping command */
+"pingDescription" = "Check if the chat bot is available";
+"PongResponse" = "Pong!";
+
+/* Version */
+"versionDescription" = "Get what version Jared is running";
+"versionResponse" = "I am version 1.5 of Jared, compiled on Swift 5!";
+
+/* send */
+"sendSyntax" = "/send,[number of times],[send delay],[message to send]";
+"sendDescription" = "Send a message repeatedly";
+
+/* schedule */
+"scheduleDescription" = "Schedule messages to be set on a certain interval";
+
+/* barf */
+"barfDescription" = "Debug message parameters";
+
+/* enable */
+"enableDescription" = "Enable Jared";
+"enabledMessaged" = "Jared has been re-enabled. To disable, type /disable";
+
+/* disable */
+"disableDescription" = "Disable Jared";
+"disabledMessage" = "Jared has been disabled. Type /enable to re-enable.";
+
+/* help */
+"helpDescription" = "Get help on commands";
+
+/* reload */
+"reloadDescription" = "Reload plugins";
+"reloadMessage" = "Successfully reloaded plugins.";
+
+"commandPrefix" = "Command: ";
+"parametersPrefix" = "Parameters: ";
+"noDescription" = "Description not provided.";
+"noDescriptionBody" = "The developer of this route did not provide parameter documentation.";
