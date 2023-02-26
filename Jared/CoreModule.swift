@@ -62,6 +62,10 @@ class CoreModule: RoutingModule {
         
         let whoami = Route(name: "/whoami", comparisons: [.startsWith: ["/whoami"]], call: {[weak self] in self?.getWho($0)}, description: "Get your name")
         
+        let initDic = Route(name: "/initDic", comparisons: [.startsWith: ["/initDic"]], call: {[weak self] in self?.initDic($0)}, description: "Initializes Dic Arrays")
+        
+        let fetchDic = Route(name: "/fetchDic", comparisons: [.startsWith: ["/fetchDic"]], call: {[weak self] in self?.fetchDic($0)}, description: "Fetches Dic Arrays")
+        
         let send = Route(name: "/send", comparisons: [.startsWith: ["/send"]], call: {[weak self] in self?.sendRepeat($0)}, description: NSLocalizedString("sendDescription"),parameterSyntax: NSLocalizedString("sendSyntax"))
         
         let name = Route(name: "/name", comparisons: [.startsWith: ["/name"]], call: {[weak self] in self?.changeName($0)}, description: "Change what Jared calls you", parameterSyntax: "/name,[your preferred name]")
@@ -72,7 +76,7 @@ class CoreModule: RoutingModule {
         
         
         
-        routes = [ping, thankYou, version, send, whoami, name, schedule, barf, wordleScore]
+        routes = [ping, thankYou, version, send, whoami, name, schedule, barf, wordleScore, initDic, fetchDic]
         
         //Launch background thread that will check for scheduled messages to send
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true, block: {[weak self] (theTimer) in
@@ -86,6 +90,29 @@ class CoreModule: RoutingModule {
     
     func pingCall(_ incoming: Message) -> Void {
         sender.send(NSLocalizedString("PongResponse"), to: incoming.RespondTo())
+    }
+    
+    func initDic(_ incoming: Message) -> Void {
+        sender.send("Initializing Dictionary", to: incoming.RespondTo())
+        
+        var userData = [String: [Int: Int]]()
+        
+        userData["rileybluerobets@gmail.com"] = [576: 4]
+        userData["sy.dv@gmail"] = [576:6]
+        
+        if let filePath = try? getFileURL(fileName: "data.dat").path {
+               NSKeyedArchiver.archiveRootObject(userData, toFile: filePath)
+        }
+    }
+    
+    func fetchDic(_ incoming: Message) -> Void{
+        var userData = [String: [Int: Int]]()
+        
+        if let filePath = try? getFileURL(fileName: "data.dat").path {
+            userData = NSKeyedUnarchiver.unarchiveObject(withFile: filePath) as! [String : [Int : Int]]
+        }
+        
+        sender.send(userData.description, to: incoming.RespondTo())
     }
     
     func barf(_ incoming: Message) -> Void {
@@ -113,6 +140,23 @@ class CoreModule: RoutingModule {
         
         let sArray = mArray[2].split(separator: "/")
         let score = Int(sArray[0]) ?? 0
+        
+        var userData = [String: [Int: Int]]()
+        
+        if let filePath = try? getFileURL(fileName: "data.dat").path {
+            userData = NSKeyedUnarchiver.unarchiveObject(withFile: filePath) as! [String : [Int : Int]]
+        }
+        
+        var dict = userData[message.sender.handle]
+        if userData.index(forKey: message.sender.handle) == nil{
+            dict = [:]
+        }
+        dict?[day] = score
+        userData[message.sender.handle] = dict
+        
+        if let filePath = try? getFileURL(fileName: "data.dat").path {
+               NSKeyedArchiver.archiveRootObject(userData, toFile: filePath)
+        }
         
         sender.send("Score Received | day: "+String(day)+" score: "+String(score), to: message.RespondTo())
         
@@ -377,4 +421,10 @@ class CoreModule: RoutingModule {
         }
         persistentContainer.saveContext()
     }
+    
+    private func getFileURL(fileName: String) throws -> URL {
+            let manager = FileManager.default
+            let dirURL = try manager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+            return dirURL.appendingPathComponent(fileName)
+     }
 }
