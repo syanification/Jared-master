@@ -58,6 +58,10 @@ class CoreModule: RoutingModule {
         
         let wordleScore = Route(name:"Wordle Score", comparisons: [.startsWith: ["Wordle"]], call: {[weak self] in self?.wordleScore($0)}, description: "Gets Wordle Score From Copy/Paste")
         
+        let getWeekly = Route(name:"Weekly", comparisons: [.startsWith: ["Weekly"]], call: {[weak self] in self?.getWeekly($0)}, description: "Get Weekly Leaderboards")
+        
+        let getDaily = Route(name:"Daily", comparisons: [.startsWith: ["Daily"]], call: {[weak self] in self?.getDaily($0)}, description: "Get Daily Leaderboards")
+        
         let version = Route(name: "/version", comparisons: [.startsWith: ["/version"]], call: {[weak self] in self?.getVersion($0)}, description: "Get the version of Jared running")
         
         let whoami = Route(name: "/whoami", comparisons: [.startsWith: ["/whoami"]], call: {[weak self] in self?.getWho($0)}, description: "Get your name")
@@ -76,7 +80,7 @@ class CoreModule: RoutingModule {
         
         
         
-        routes = [ping, thankYou, version, send, whoami, name, schedule, barf, wordleScore, initDic, fetchDic]
+        routes = [ping, thankYou, version, send, whoami, name, schedule, barf, wordleScore, initDic, fetchDic, getWeekly, getDaily]
         
         //Launch background thread that will check for scheduled messages to send
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true, block: {[weak self] (theTimer) in
@@ -139,7 +143,7 @@ class CoreModule: RoutingModule {
         let day = Int(mArray[1]) ?? -1
         
         let sArray = mArray[2].split(separator: "/")
-        let score = Int(sArray[0]) ?? 0
+        let score = Int(sArray[0]) ?? 8
         
         var userData = [String: [Int: Int]]()
         
@@ -154,12 +158,78 @@ class CoreModule: RoutingModule {
         dict?[day] = score
         userData[message.sender.handle] = dict
         
+        //Stores current wordle day in handle "curDay"[-1]
+        var dayData = userData["curDay"]
+        if userData.index(forKey: "curDay") == nil{
+            dayData = [:]
+        }
+        dayData?[-1] = day
+        userData["curDay"] = dayData
+        
         if let filePath = try? getFileURL(fileName: "data.dat").path {
                NSKeyedArchiver.archiveRootObject(userData, toFile: filePath)
         }
         
-        sender.send("Score Received | day: "+String(day)+" score: "+String(score), to: message.RespondTo())
+        //sender.send("Score Received | day: "+String(day)+" score: "+String(score), to: message.RespondTo())
         
+    }
+    
+    func getDaily(_ message: Message) -> Void {
+        var userData = [String: [Int: Int]]()
+        
+        if let filePath = try? getFileURL(fileName: "data.dat").path {
+            userData = NSKeyedUnarchiver.unarchiveObject(withFile: filePath) as! [String : [Int : Int]]
+        }
+        let curDay = userData["curDay"]
+        
+        let scores = getTotals(userData: userData, numDays: 1,curDay: curDay?[-1] ?? 0)
+        
+        let sortedScores = scores.sorted { $0.1 < $1.1 }
+        
+        var returnString = "\u{1F3C6} Daily Leaderboards \u{1F3C6}\n-----------------------------\n"
+        
+        var numRanks = 5
+        
+        if sortedScores.count < 5 {
+            numRanks = sortedScores.count
+        }
+        
+        for rank in 0...(numRanks-1) {
+            returnString += String(rank+1) + ". " + sortedScores[rank].key + " (" + String(sortedScores[rank].value) + ")\n"
+        }
+        
+        sender.send(returnString, to: message.RespondTo())
+//        sender.send(sortedScores.description, to: message.RespondTo())
+//        sender.send(sortedScores[0].key, to: message.RespondTo())
+    }
+    
+    func getWeekly(_ message: Message) -> Void {
+        var userData = [String: [Int: Int]]()
+        
+        if let filePath = try? getFileURL(fileName: "data.dat").path {
+            userData = NSKeyedUnarchiver.unarchiveObject(withFile: filePath) as! [String : [Int : Int]]
+        }
+        let curDay = userData["curDay"]
+        
+        let scores = getTotals(userData: userData, numDays: 7,curDay: curDay?[-1] ?? 0)
+        
+        let sortedScores = scores.sorted { $0.1 < $1.1 }
+        
+        var returnString = "\u{1F3C6} Weekly Leaderboards \u{1F3C6}\n-----------------------------\n"
+        
+        var numRanks = 5
+        
+        if sortedScores.count < 5 {
+            numRanks = sortedScores.count
+        }
+        
+        for rank in 0...(numRanks-1) {
+            returnString += String(rank+1) + ". " + sortedScores[rank].key + " (" + String(sortedScores[rank].value) + ")\n"
+        }
+        
+        sender.send(returnString, to: message.RespondTo())
+//        sender.send(sortedScores.description, to: message.RespondTo())
+//        sender.send(sortedScores[0].key, to: message.RespondTo())
     }
     
     func getVersion(_ message: Message) -> Void {
@@ -427,4 +497,27 @@ class CoreModule: RoutingModule {
             let dirURL = try manager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
             return dirURL.appendingPathComponent(fileName)
      }
+    
+    private func getTotals(userData: [String: [Int: Int]], numDays: Int, curDay: Int) -> [String: Int]{
+        var totals = [String: Int]()
+        var sum = 0
+        
+        for (handle, scores) in userData {
+            
+            if (handle == "curDay"){continue}
+            
+            sum = 0
+            var x = 1
+            
+            for day in (curDay - (numDays-1))...curDay{
+                x += 1
+                //If someone missed a day they get a score of 8
+                sum += scores[day] ?? 8
+            }
+            
+            totals[handle] = sum
+        }
+        
+        return totals
+    }
 }
