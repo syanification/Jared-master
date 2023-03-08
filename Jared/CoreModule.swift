@@ -58,6 +58,8 @@ class CoreModule: RoutingModule {
         
         let wordleScore = Route(name:"Wordle Score", comparisons: [.startsWith: ["Wordle"]], call: {[weak self] in self?.wordleScore($0)}, description: "Gets Wordle Score From Copy/Paste")
         
+        let getMonthly = Route(name:"Monthly", comparisons: [.startsWith: ["Monthly"]], call: {[weak self] in self?.getMonthly($0)}, description: "Get Monthly Leaderboards")
+        
         let getWeekly = Route(name:"Weekly", comparisons: [.startsWith: ["Weekly"]], call: {[weak self] in self?.getWeekly($0)}, description: "Get Weekly Leaderboards")
         
         let getDaily = Route(name:"Daily", comparisons: [.startsWith: ["Daily"]], call: {[weak self] in self?.getDaily($0)}, description: "Get Daily Leaderboards")
@@ -80,7 +82,7 @@ class CoreModule: RoutingModule {
         
         
         
-        routes = [ping, thankYou, version, send, whoami, name, schedule, barf, wordleScore, initDic, fetchDic, getWeekly, getDaily]
+        routes = [ping, thankYou, version, send, whoami, name, schedule, barf, wordleScore, initDic, fetchDic, getWeekly, getDaily, getMonthly]
         
         //Launch background thread that will check for scheduled messages to send
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true, block: {[weak self] (theTimer) in
@@ -186,7 +188,7 @@ class CoreModule: RoutingModule {
         
         let sortedScores = scores.sorted { $0.1 < $1.1 }
         
-        var returnString = "\u{1F3C6} Daily Leaderboards \u{1F3C6}\n-----------------------------\n"
+        var returnString = "\u{1F3C6} Daily Leaderboards \u{1F3C6}\n---------------------------"
         
         var numRanks = 5
         
@@ -195,7 +197,7 @@ class CoreModule: RoutingModule {
         }
         
         for rank in 0...(numRanks-1) {
-            returnString += String(rank+1) + ". " + sortedScores[rank].key + " (" + String(sortedScores[rank].value) + ")\n"
+            returnString += "\n" + String(rank+1) + ". " + getName(handle: sortedScores[rank].key) + " (" + String(sortedScores[rank].value) + ")"
         }
         
         sender.send(returnString, to: message.RespondTo())
@@ -215,7 +217,7 @@ class CoreModule: RoutingModule {
         
         let sortedScores = scores.sorted { $0.1 < $1.1 }
         
-        var returnString = "\u{1F3C6} Weekly Leaderboards \u{1F3C6}\n-----------------------------\n"
+        var returnString = "\u{1F3C6} Weekly Leaderboards \u{1F3C6}\n-----------------------------"
         
         var numRanks = 5
         
@@ -224,7 +226,36 @@ class CoreModule: RoutingModule {
         }
         
         for rank in 0...(numRanks-1) {
-            returnString += String(rank+1) + ". " + sortedScores[rank].key + " (" + String(sortedScores[rank].value) + ")\n"
+            returnString += "\n" + String(rank+1) + ". " + getName(handle: sortedScores[rank].key) + " (" + String(sortedScores[rank].value) + ")"
+        }
+        
+        sender.send(returnString, to: message.RespondTo())
+//        sender.send(sortedScores.description, to: message.RespondTo())
+//        sender.send(sortedScores[0].key, to: message.RespondTo())
+    }
+    
+    func getMonthly(_ message: Message) -> Void {
+        var userData = [String: [Int: Int]]()
+        
+        if let filePath = try? getFileURL(fileName: "data.dat").path {
+            userData = NSKeyedUnarchiver.unarchiveObject(withFile: filePath) as! [String : [Int : Int]]
+        }
+        let curDay = userData["curDay"]
+        
+        let scores = getTotals(userData: userData, numDays: 30,curDay: curDay?[-1] ?? 0)
+        
+        let sortedScores = scores.sorted { $0.1 < $1.1 }
+        
+        var returnString = "\u{1F3C6} Monthly Leaderboards \u{1F3C6}\n------------------------------"
+        
+        var numRanks = 5
+        
+        if sortedScores.count < 5 {
+            numRanks = sortedScores.count
+        }
+        
+        for rank in 0...(numRanks-1) {
+            returnString += "\n" + String(rank+1) + ". " + getName(handle: sortedScores[rank].key) + " (" + String(sortedScores[rank].value) + ")"
         }
         
         sender.send(returnString, to: message.RespondTo())
@@ -505,6 +536,7 @@ class CoreModule: RoutingModule {
         for (handle, scores) in userData {
             
             if (handle == "curDay"){continue}
+            if (handle == "rileybluerobets@gmail.com" || handle == "sy.dv@gmail"){continue}
             
             sum = 0
             var x = 1
@@ -519,5 +551,21 @@ class CoreModule: RoutingModule {
         }
         
         return totals
+    }
+    
+    private func getName(handle: String) -> String{
+        
+        let dict = [
+            "+17472837692": "Riley",
+            "+16472416252": "Brian",
+            "+16509066690": "Shirley",
+            "+16504684100": "Bruce",
+            "sosoroberts@icloud.com": "Sophia",
+            "mikeyrw2004@yahoo.com": "Mike",
+            "+14082420231": "Scott",
+            "+16509066630": "Lisa"
+        ]
+        
+        return dict[handle] ?? handle
     }
 }
